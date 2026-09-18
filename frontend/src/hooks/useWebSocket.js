@@ -10,7 +10,7 @@ export const useWebSocket = (pollId, onVoteUpdate) => {
     if (!pollId) return;
 
     setStatus('connecting');
-    const wsUrl = `ws://localhost:8080/ws/polls/${pollId}`;
+    const wsUrl = `ws://localhost:8081/ws/polls/${pollId}`;
 
     try {
       const ws = new WebSocket(wsUrl);
