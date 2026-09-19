@@ -1,0 +1,19 @@
+services:
+  # Go Gin Backend Service on Render
+  - type: web
+    name: hcl-polling-backend
+    env: docker
+    dockerfilePath: backend/Dockerfile
+    dockerContext: backend
+    plan: free
+    envVars:
+      - key: PORT
+        value: 8080
+      - key: MONGO_URI
+        sync: false
+      - key: MONGO_DB_NAME
+        value: live_polling_db
+      - key: REDIS_ADDR
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true

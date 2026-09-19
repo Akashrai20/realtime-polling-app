@@ -1,5 +1,5 @@
 // API service helper connecting to Go Gin backend with JWT token injection
-const API_BASE_URL = 'http://localhost:8081/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8081/api';
 
 // Helper for making authenticated/public HTTP requests
 export async function apiRequest(endpoint, options = {}) {

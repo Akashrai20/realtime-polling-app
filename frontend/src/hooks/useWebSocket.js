@@ -10,7 +10,8 @@ export const useWebSocket = (pollId, onVoteUpdate) => {
     if (!pollId) return;
 
     setStatus('connecting');
-    const wsUrl = `ws://localhost:8081/ws/polls/${pollId}`;
+    const wsBase = import.meta.env.VITE_WS_BASE_URL || 'ws://localhost:8081';
+    const wsUrl = `${wsBase}/ws/polls/${pollId}`;
 
     try {
       const ws = new WebSocket(wsUrl);
