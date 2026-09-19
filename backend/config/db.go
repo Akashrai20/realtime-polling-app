@@ -2,9 +2,11 @@ package config
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"log"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/go-redis/redis/v8"
@@ -73,13 +75,20 @@ func InitDB() (*DatabaseContainer, error) {
 
 	if redisClient == nil {
 		log.Printf("[Database] Connecting to Redis at: %s...", redisAddr)
-		redisClient = redis.NewClient(&redis.Options{
+		opts := &redis.Options{
 			Addr:         redisAddr,
 			Password:     redisPassword,
 			DB:           redisDB,
 			PoolSize:     50,
 			MinIdleConns: 10,
-		})
+		}
+		if strings.Contains(redisAddr, "upstash.io") || os.Getenv("REDIS_USE_TLS") == "true" {
+			log.Println("[Database] Enabling TLS for Upstash Redis endpoint...")
+			opts.TLSConfig = &tls.Config{
+				MinVersion: tls.VersionTLS12,
+			}
+		}
+		redisClient = redis.NewClient(opts)
 	}
 
 	// Verify Redis Ping
