@@ -140,10 +140,16 @@ export const PollViewPage = () => {
     setSubmitting(true);
 
     try {
+      let fp = fingerprint;
+      if (!fp) {
+        fp = await getVisitorFingerprint();
+        setFingerprint(fp);
+      }
+
       const response = await api.post(`/polls/${id}/vote`, {
         poll_id: id,
         option_id: selectedOptionId,
-        voter_fingerprint: fingerprint || 'fp_fallback_' + Date.now(),
+        voter_fingerprint: fp,
       });
 
       const { new_option_votes, total_votes } = response.data;

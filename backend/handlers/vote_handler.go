@@ -92,26 +92,46 @@ func CastVote(c *gin.Context) {
 
 	if config.DB.RedisClient != nil {
 		redisClient := config.DB.RedisClient
-		votersKey := fmt.Sprintf("poll:%s:voters", pollIDStr)
+		fpVotersKey := fmt.Sprintf("poll:%s:voters:fp", pollIDStr)
+		ipVotersKey := fmt.Sprintf("poll:%s:voters:ip", pollIDStr)
 		redisPollKey := fmt.Sprintf("poll:%s:votes", pollIDStr)
 
-		// Create unique voter identifier based on security settings
-		voterID := fmt.Sprintf("fp:%s", voterFingerprint)
-		if poll.RestrictIP {
-			voterID += fmt.Sprintf(":ip:%s", clientIP)
+		// 2a. Check Fingerprint restriction if enabled
+		if poll.RestrictFingerprint && voterFingerprint != "" {
+			isMember, err := redisClient.SIsMember(ctx, fpVotersKey, voterFingerprint).Result()
+			if err == nil && isMember {
+				c.JSON(http.StatusConflict, gin.H{
+					"error": "Duplicate Vote Blocked: This device/browser has already voted on this poll",
+				})
+				return
+			}
 		}
 
-		// SADD returns 1 if added, 0 if already present in set
-		added, err := redisClient.SAdd(ctx, votersKey, voterID).Result()
-		if err == nil && added == 0 && poll.RestrictFingerprint {
-			c.JSON(http.StatusConflict, gin.H{
-				"error": "Duplicate Vote Blocked: Device fingerprint or IP has already voted on this poll",
-			})
-			return
+		// 2b. Check IP restriction if enabled
+		if poll.RestrictIP && clientIP != "" {
+			isMember, err := redisClient.SIsMember(ctx, ipVotersKey, clientIP).Result()
+			if err == nil && isMember {
+				c.JSON(http.StatusConflict, gin.H{
+					"error": "Duplicate Vote Blocked: A vote has already been submitted from this IP / network",
+				})
+				return
+			}
 		}
 
-		// Set Redis Voters Set TTL to match poll expiry
-		redisClient.Expire(ctx, votersKey, time.Until(poll.ExpiresAt))
+		// Register voter in Redis Sets & set expiration to match poll duration
+		ttl := time.Until(poll.ExpiresAt)
+		if ttl <= 0 {
+			ttl = 24 * time.Hour
+		}
+
+		if voterFingerprint != "" {
+			redisClient.SAdd(ctx, fpVotersKey, voterFingerprint)
+			redisClient.Expire(ctx, fpVotersKey, ttl)
+		}
+		if clientIP != "" {
+			redisClient.SAdd(ctx, ipVotersKey, clientIP)
+			redisClient.Expire(ctx, ipVotersKey, ttl)
+		}
 
 		// 3. Atomic Vote Count Increment via Redis HINCRBY
 		newCount, err := redisClient.HIncrBy(ctx, redisPollKey, req.OptionID, 1).Result()
