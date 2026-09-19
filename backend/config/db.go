@@ -56,14 +56,31 @@ func InitDB() (*DatabaseContainer, error) {
 	mongoDB := mongoClient.Database(mongoDBName)
 
 	// 3. Initialize Redis Client
-	log.Printf("[Database] Connecting to Redis at: %s...", redisAddr)
-	redisClient := redis.NewClient(&redis.Options{
-		Addr:         redisAddr,
-		Password:     redisPassword,
-		DB:           redisDB,
-		PoolSize:     50,
-		MinIdleConns: 10,
-	})
+	redisURL := os.Getenv("REDIS_URL")
+	var redisClient *redis.Client
+
+	if redisURL != "" {
+		log.Printf("[Database] Connecting to Redis via REDIS_URL...")
+		opt, err := redis.ParseURL(redisURL)
+		if err != nil {
+			log.Printf("[Database Warning] Invalid REDIS_URL format (%v). Falling back to REDIS_ADDR.", err)
+		} else {
+			opt.PoolSize = 50
+			opt.MinIdleConns = 10
+			redisClient = redis.NewClient(opt)
+		}
+	}
+
+	if redisClient == nil {
+		log.Printf("[Database] Connecting to Redis at: %s...", redisAddr)
+		redisClient = redis.NewClient(&redis.Options{
+			Addr:         redisAddr,
+			Password:     redisPassword,
+			DB:           redisDB,
+			PoolSize:     50,
+			MinIdleConns: 10,
+		})
+	}
 
 	// Verify Redis Ping
 	if err := redisClient.Ping(ctx).Err(); err != nil {
