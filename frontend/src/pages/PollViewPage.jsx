@@ -78,9 +78,12 @@ export const PollViewPage = () => {
   useEffect(() => {
     if (!id) return;
 
-    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsPort = window.location.port === '5173' ? '8081' : (window.location.port || '8081');
-    const wsUrl = `${wsProtocol}//${window.location.hostname}:${wsPort}/api/polls/${id}/ws`;
+    const defaultWsBase =
+      typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+        ? 'ws://localhost:8081'
+        : 'wss://hcl-polling-backend.onrender.com';
+    const wsBase = import.meta.env.VITE_WS_BASE_URL || defaultWsBase;
+    const wsUrl = `${wsBase}/api/polls/${id}/ws`;
 
     console.log(`[WebSocket] Connecting to ${wsUrl}`);
     setWsStatus('connecting');

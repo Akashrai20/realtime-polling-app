@@ -10,8 +10,12 @@ export const useWebSocket = (pollId, onVoteUpdate) => {
     if (!pollId) return;
 
     setStatus('connecting');
-    const wsBase = import.meta.env.VITE_WS_BASE_URL || 'ws://localhost:8081';
-    const wsUrl = `${wsBase}/ws/polls/${pollId}`;
+    const defaultWsBase =
+      typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+        ? 'ws://localhost:8081'
+        : 'wss://hcl-polling-backend.onrender.com';
+    const wsBase = import.meta.env.VITE_WS_BASE_URL || defaultWsBase;
+    const wsUrl = `${wsBase}/api/polls/${pollId}/ws`;
 
     try {
       const ws = new WebSocket(wsUrl);
